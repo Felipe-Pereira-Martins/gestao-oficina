@@ -1,41 +1,59 @@
 <?php 
 require_once("conexao.php");
-@session_start();
+session_start();
 
-$email = $_POST['email'];
-$senha = $_POST['senha'];
+/* $email = $_POST['email'];
+$senha = $_POST['senha']; */
 
-$query = $pdo->prepare("SELECT * FROM usuarios where email = :email and senha = :senha");
+// filter_input é uma função do PHP usada para capturar e validar dados de entrada
+// Prática moderna que ajuda a tornar o código mais seguro e limpo
+$email = filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL);
+$senha = $_POST['senha'] ?? '';
+
+// Código utilizando o Query, funciona com consultas rápidas porém vulnerável a SQL Injection
+/* $query = $pdo->prepare("SELECT * FROM usuarios where email = :email and senha = :senha");
 $query->bindValue(":senha", $senha);
 $query->bindValue(":email", $email);
-$query->execute();
+$query->execute(); */
 
-$res = $query->fetchAll(PDO::FETCH_ASSOC);
-$total_reg = @count($res);
-if($total_reg > 0){
+// Prepara a query para buscar apenas pelo email
+$stmt = $pdo->prepare("SELECT * FROM usuarios WHERE email = :email LIMIT 1"); // LIMIT1 garante que so venha um registro ser for duplicado
+$stmt->bindValue(":email", $email);
+$stmt->execute();
 
-	$_SESSION['id_usuario'] = $res[0]['id'];
-	$_SESSION['nome_usuario'] = $res[0]['nome'];
-	$_SESSION['cpf_usuario'] = $res[0]['cpf'];
-	$_SESSION['nivel_usuario'] = $res[0]['nivel'];
 
-	$nivel = $res[0]['nivel'];
+// Pega o resultado (um único usuário)
+$user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-	if($nivel == 'admin'){
-		echo "<script language='javascript'> window.location='painel-adm' </script>";
-	}
+// Verifica se encontrou usuário e se a senha confere
+if($user && password_verify($senha, $user['senha'])){
+    // Login válido → cria sessão
+    session_regenerate_id(true);
 
-	if($nivel == 'mecanico'){
-		echo "<script language='javascript'> window.location='painel-mecanico' </script>";
-	}
+    $_SESSION['id_usuario']   = $user['id'];
+    $_SESSION['nome_usuario'] = $user['nome'];
+    $_SESSION['cpf_usuario']  = $user['cpf'];
+    $_SESSION['nivel_usuario']= $user['nivel'];
 
-	if($nivel == 'recep'){
-		echo "<script language='javascript'> window.location='painel-recepcao' </script>";
-	}
-	
-}else{
-	echo "<script language='javascript'> window.alert('Usuário ou Senha Incorreta!') </script>";
-	echo "<script language='javascript'> window.location='index.php' </script>";	
+    $nivel = $user['nivel'];
+
+    // Redireciona conforme nível
+    if($nivel == 'admin'){
+        echo "<script language='javascript'> window.location='painel-adm' </script>";
+    }
+
+    if($nivel == 'mecanico'){
+        echo "<script language='javascript'> window.location='painel-mecanico' </script>";
+    }
+
+    if($nivel == 'recep'){
+        echo "<script language='javascript'> window.location='painel-recepcao' </script>";
+    }
+
+} else {
+    // Login inválido
+    echo "<script language='javascript'> window.alert('Usuário ou Senha Incorreta!') </script>";
+    echo "<script language='javascript'> window.location='index.php' </script>";    
 }
 
 
