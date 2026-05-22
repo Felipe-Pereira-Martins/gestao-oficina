@@ -1,168 +1,276 @@
 <?php
-// Inclui o arquivo de conexão com o banco de dados
-require_once("conexao.php");
-
-// ============================================
-// CRIAÇÃO AUTOMÁTICA DO USUÁRIO ADMINISTRADOR
-// ============================================
-// Verifica se já existe um usuário com nível 'admin' no sistema
-$query = $pdo->query("SELECT * FROM usuarios WHERE nivel = 'admin'");
-$res = $query->fetchAll(PDO::FETCH_ASSOC);
-$total_reg = count($res);
-
-// Se não existir nenhum administrador (total_reg == 0), cria um automaticamente
-if($total_reg == 0){
-    // Insere o usuário admin padrão com email vindo da variável $email_adm (definida no conexao.php)
-    // Senha padrão: 123 (recomendado alterar após primeiro acesso)
-    $res = $pdo->query("INSERT INTO usuarios SET nome = 'Administrador', cpf = '000.000.000-00', email = '$email_adm', senha = '123', nivel = 'admin'");   
+// ============================================================
+//  GESTÃO DE OFICINA — index.php
+// ============================================================
+require_once("conexao.php"); // Inclui conexão com banco de dados e configurações
+// Cria admin padrão se não existir
+$q = $pdo->query("SELECT COUNT(*) FROM usuarios WHERE nivel = 'admin'"); // Conta usuários admin
+if ((int)$q->fetchColumn() === 0) { // Se não existir admin
+    $pdo->query("INSERT INTO usuarios SET
+        nome  = 'Administrador',
+        cpf   = '000.000.000-00',
+        email = '$email_adm',
+        senha = '123',
+        nivel = 'admin'
+    "); // Cria usuário administrador padrão
 }
 
-// ============================================
-// LIMPEZA AUTOMÁTICA DE ORÇAMENTOS ANTIGOS
-// ============================================
-// Pega a data atual no formato YYYY-MM-DD
-$data_hoje = date('Y-m-d');
-
-// Calcula a data limite para exclusão (data atual - X dias)
-// $excluir_orcamento_dias é uma variável definida no arquivo de configuração
-$data_15 = date('Y-m-d', strtotime("-$excluir_orcamento_dias days", strtotime($data_hoje)));
-
-// Busca todos os orçamentos com data menor ou igual à data limite (mais antigos)
-$query = $pdo->query("SELECT * FROM orcamentos WHERE data <= '$data_15'");
-$res = $query->fetchAll(PDO::FETCH_ASSOC);
-
-// Percorre todos os orçamentos encontrados e exclui cada um
-for ($i=0; $i < count($res); $i++) { 
-    $id_orc = $res[$i]['id']; // Pega o ID do orçamento
-    $pdo->query("DELETE FROM orcamentos WHERE id = '$id_orc'"); // Exclui o orçamento
+// Remove orçamentos antigos
+$data_limite = date('Y-m-d', strtotime("-$excluir_orcamento_dias days")); // Calcula data limite para exclusão
+$q = $pdo->query("SELECT id FROM orcamentos WHERE data <= '$data_limite'"); // Busca orçamentos vencidos
+foreach ($q->fetchAll(PDO::FETCH_COLUMN) as $id) { // Para cada orçamento vencido
+    $pdo->query("DELETE FROM orcamentos WHERE id = '$id'"); // Exclui orçamento
 }
 ?>
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <!-- Configuração de viewport para responsividade em dispositivos móveis -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestão de Oficina - Martins Sistemas </title>
-    
-    <!-- Bootstrap 4.3.1 CSS - Framework para layout responsivo -->
+    <title>Gestão de Oficina — Acesso</title>
+    <!-- Bootstrap 4 -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
-    
-    <!-- Font Awesome 5 - Biblioteca de ícones -->
+    <!-- Font Awesome 5 -->
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css">
-    
-    <!-- Estilos personalizados do sistema (sobrescreve o Bootstrap quando necessário) -->
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- CSS do sistema (carregado POR ÚLTIMO para sobrescrever Bootstrap) -->
     <link rel="stylesheet" href="css/style.css">
-    
-    <!-- Favicon - ícone que aparece na aba do navegador -->
-    <link rel="shortcut icon" href="img/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="img/favicon.ico" type="image/x-icon"> <!-- Ícone da página -->
 </head>
-<!-- Classe 'login-page' aplicada para estilização específica da tela de login -->
-<body class="login-page">
-    <!-- Card principal de login - container centralizado -->
-    <div class="login-card">
-        <!-- Cabeçalho do card com logo -->
-        <div class="login-header">
-            <img src="img/logo.png" alt="SAS - Sistema de Oficina">
-        </div>
-        
-        <!-- Corpo do card com formulário de login -->
-        <div class="login-body">
-            <h2>Acesso ao Sistema</h2>
-            
-            <!-- Formulário de login - envia dados para autenticar.php via POST -->
-            <form method="post" action="autenticar.php">
-                <!-- Campo de e-mail -->
-                <div class="form-group">
-                    <label for="email">E-mail</label>
-                    <input type="email" class="form-control" id="email" name="email" 
-                           placeholder="Digite seu e-mail" required autofocus>
-                    <!-- required: campo obrigatório | autofocus: foco automático ao carregar -->
-                </div>
-                
-                <!-- Campo de senha -->
-                <div class="form-group">
-                    <label for="senha">Senha</label>
-                    <input type="password" class="form-control" id="senha" name="senha" 
-                           placeholder="Digite sua senha" required>
-                </div>
-                
-                <!-- Botão de submit com ícone de entrada -->
-                <button type="submit" class="btn-login">
-                    <i class="fas fa-sign-in-alt mr-2"></i>Entrar
-                </button>
-                
-                <!-- Link para abrir modal de recuperação de senha -->
-                <a href="#" class="recuperar-link" data-toggle="modal" data-target="#modalRecuperar">
-                    <i class="fas fa-key"></i> Recuperar Senha
-                </a>
-            </form>
-        </div>
-    </div>
 
-    <!-- ============================================ -->
-    <!-- MODAL DE RECUPERAÇÃO DE SENHA               -->
-    <!-- ============================================ -->
-    <!-- modal fade: efeito de fade ao abrir/fechar -->
-    <!-- data-backdrop="static": impede fechar clicando fora -->
-    <div class="modal fade" id="modalRecuperar" data-backdrop="static" tabindex="-1" role="dialog">
-        <!-- modal-dialog-centered: centraliza verticalmente -->
-        <div class="modal-dialog modal-dialog-centered" role="document">
-            <div class="modal-content">
-                <!-- Cabeçalho do modal -->
-                <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="fas fa-key"></i> Recuperar Senha
-                    </h5>
-                    <!-- Botão X para fechar -->
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+<body class="login-page"> <!-- Classe específica para página de login -->
+
+<!--
+    .login-wrapper usa position:fixed; inset:0
+    Isso torna o layout completamente imune ao Bootstrap —
+    não importa o que o Bootstrap faça no html/body.
+-->
+<div class="login-wrapper"> <!-- Container principal do layout de login -->
+    <!-- ── PAINEL ESQUERDO — Visual / Branding ── -->
+    <aside class="login-visual" aria-hidden="true"> <!-- Painel decorativo esquerdo -->
+
+        <div class="visual-accent-line"></div> <!-- Linha decorativa -->
+        <div class="visual-watermark">RPM</div> <!-- Marca d'água de fundo -->
+
+        <div class="visual-content">
+            <p class="visual-tagline">
+                <i class="fas fa-circle" style="font-size:5px;"></i>
+                Gestão Automotiva
+            </p>
+
+            <h2 class="visual-headline">
+                Controle total<br>
+                da sua <em>oficina</em>.
+            </h2>
+
+            <p class="visual-desc">
+                Gerencie orçamentos, ordens de serviço, clientes e
+                estoque em um único painel — rápido, seguro e sob
+                medida para oficinas de alta performance.
+            </p>
+
+            <div class="visual-stats"> <!-- Indicadores visuais -->
+                <div class="stat-item">
+                    <span class="stat-value">360<span>°</span></span>
+                    <span class="stat-label">Visibilidade</span>
                 </div>
-                
-                <!-- Formulário de recuperação de senha (envio via AJAX) -->
-                <form method="POST" id="form-recuperar">
-                    <div class="modal-body">
-                        <!-- Campo para digitar o e-mail cadastrado -->
-                        <div class="form-group">
-                            <label for="email-recuperar">E-mail cadastrado</label>
-                            <input type="email" class="form-control" id="email-recuperar" 
-                                   name="email" placeholder="Digite seu e-mail" required>
-                        </div>
-                        
-                        <!-- Área para exibir mensagens de feedback (sucesso/erro) -->
-                        <div id="mensagem"></div>
-                    </div>
-                    
-                    <!-- Rodapé do modal com botões -->
-                    <div class="modal-footer">
-                        <!-- Botão para fechar o modal sem ação -->
-                        <button type="button" class="btn-fechar" data-dismiss="modal">
-                            <i class="fas fa-times mr-1"></i>Fechar
-                        </button>
-                        <!-- Botão para enviar o formulário de recuperação -->
-                        <button type="submit" class="btn-recuperar">
-                            <i class="fas fa-paper-plane mr-1"></i>Recuperar
-                        </button>
-                    </div>
-                </form>
+                <div class="stat-item">
+                    <span class="stat-value">24<span>/7</span></span>
+                    <span class="stat-label">Disponível</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">100<span>%</span></span>
+                    <span class="stat-label">Em Nuvem</span>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- ============================================ -->
-    <!-- SCRIPTS JAVASCRIPT                          -->
-    <!-- ============================================ -->
-    <!-- jQuery - necessário para Bootstrap e AJAX -->
-    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
-    
-    <!-- Popper.js - necessário para alguns componentes do Bootstrap -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
-    
-    <!-- Bootstrap JS - para funcionalidades como modal, dropdown, etc -->
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
-    
-    <!-- Script personalizado da tela de login (contém a lógica AJAX para recuperar senha) -->
-    <script src="js/login.js"></script>
+    </aside>
+
+    <!-- Divisória -->
+    <div class="login-divider" aria-hidden="true"></div> <!-- Linha divisória entre painéis -->
+
+    <!-- ── PAINEL DIREITO — Formulário ── -->
+    <main class="login-form-panel"> <!-- Painel do formulário de login -->
+        <div class="form-inner">
+
+            <!-- Logo -->
+            <div class="form-logo">
+                <img src="img/logo.png" alt="Gestão de Oficina">
+            </div>
+
+            <!-- Título -->
+            <div class="form-heading">
+                <span class="label-pill">
+                    <i class="fas fa-lock"></i>
+                    Área restrita
+                </span>
+                <h1>Acesso ao Sistema</h1>
+                <p>Informe suas credenciais para continuar.</p>
+            </div>
+
+            <!-- Formulário -->
+            <form method="POST" action="autenticar.php" novalidate> <!-- Envia para autenticação -->
+
+                <!-- E-mail -->
+                <div class="field-group">
+                    <div class="field-label">
+                        <label for="login_email">E-mail</label>
+                    </div>
+                    <div class="field-wrap">
+                        <input type="email"
+                               id="login_email"
+                               name="email"
+                               class="form-control-custom"
+                               placeholder="seu@email.com"
+                               required
+                               autofocus
+                               autocomplete="email">
+                        <span class="field-icon" aria-hidden="true">
+                            <i class="fas fa-envelope"></i>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Senha -->
+                <div class="field-group">
+                    <div class="field-label">
+                        <label for="login_senha">Senha</label>
+                    </div>
+                    <div class="field-wrap">
+                        <input type="password"
+                               id="login_senha"
+                               name="senha"
+                               class="form-control-custom"
+                               placeholder="••••••••"
+                               required
+                               autocomplete="current-password">
+                        <span class="field-icon" aria-hidden="true">
+                            <i class="fas fa-key"></i>
+                        </span>
+                        <button type="button"
+                                class="toggle-pw"
+                                id="togglePw"
+                                aria-label="Mostrar senha">
+                            <i class="fas fa-eye" id="togglePwIcon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Submit -->
+                <button type="submit" class="btn-submit">
+                    <i class="fas fa-arrow-right btn-icon"></i>
+                    Entrar
+                </button>
+
+            </form>
+
+            <!-- Recuperar senha -->
+            <div class="form-footer">
+                <a href="#"
+                   class="recover-link"
+                   data-toggle="modal"
+                   data-target="#modalRecuperar"> <!-- Abre modal de recuperação -->
+                    <i class="fas fa-undo-alt"></i>
+                    Recuperar senha
+                </a>
+            </div>
+
+            <!-- Rodapé -->
+            <div class="form-brand-footer">
+                <span class="powered">Martins Sistemas</span>
+                <span class="version">v2026</span>
+            </div>
+
+        </div>
+    </main>
+
+</div><!-- /.login-wrapper -->
+
+
+<!-- ── MODAL: Recuperação de Senha ── -->
+<div class="modal fade"
+     id="modalRecuperar"
+     data-backdrop="static" <!-- Não fecha ao clicar fora -->
+     tabindex="-1"
+     role="dialog"
+     aria-labelledby="tituloModalRecuperar">
+
+    <div class="modal-dialog modal-dialog-centered" role="document"> <!-- Modal centralizado -->
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="tituloModalRecuperar">
+                    <i class="fas fa-shield-alt"></i>
+                    Recuperar Senha
+                </h5>
+                <button type="button"
+                        class="close"
+                        data-dismiss="modal"
+                        aria-label="Fechar">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <form method="POST" id="form-recuperar" novalidate> <!-- Formulário de recuperação -->
+                <div class="modal-body">
+                    <div class="field-group">
+                        <div class="field-label">
+                            <label for="email_recuperar">E-mail cadastrado</label>
+                        </div>
+                        <div class="field-wrap">
+                            <input type="email"
+                                   id="email_recuperar"
+                                   name="email"
+                                   class="form-control-custom"
+                                   placeholder="seu@email.com"
+                                   required>
+                            <span class="field-icon" aria-hidden="true">
+                                <i class="fas fa-envelope"></i>
+                            </span>
+                        </div>
+                    </div>
+                    <div id="mensagem" role="alert" aria-live="polite"></div> <!-- Área para feedback -->
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancel" data-dismiss="modal">
+                        <i class="fas fa-times mr-1"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn-recover">
+                        <i class="fas fa-paper-plane mr-1"></i>Enviar
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+
+<!-- Scripts -->
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script> <!-- jQuery -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script> <!-- Popper.js -->
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script> <!-- Bootstrap JS -->
+
+<script>
+// Toggle senha
+(function () {
+    var btn   = document.getElementById('togglePw'); // Botão de mostrar/ocultar
+    var input = document.getElementById('login_senha'); // Campo de senha
+    var icon  = document.getElementById('togglePwIcon'); // Ícone do botão
+    if (!btn) return; // Se botão não existe, sai
+    btn.addEventListener('click', function () {
+        var isPw = input.type === 'password'; // Verifica se é campo de senha
+        input.type = isPw ? 'text' : 'password'; // Alterna entre texto e senha
+        icon.className = isPw ? 'fas fa-eye-slash' : 'fas fa-eye'; // Alterna ícone
+        btn.setAttribute('aria-label', isPw ? 'Ocultar senha' : 'Mostrar senha'); // Atualiza acessibilidade
+    });
+}());
+</script>
+
+<script src="js/login.js"></script> <!-- Script do login -->
 </body>
 </html>

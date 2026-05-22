@@ -1,24 +1,24 @@
 <?php 
 
-$nome_oficina = "Oficina Freitas";
-$url = "http://localhost/oficina/";
-$endereco_oficina = "Rua Alameda Campos, 157, Belo Horizonte";
-$telefone_oficina = "(31)97527-5084";
-$email_adm = 'hvfadvocacia@gmail.com';
-$rodape_relatorios = "Desenvolvido por Hugo Vasconcelos - Portal Hugo Cursos";
+/* $nome_oficina = "Oficina Freitas"; */ // Nome da oficina
+$url = "http://localhost/oficina/"; // URL base do sistema
+/* $endereco_oficina = "Rua Alameda Campos, 157, Belo Horizonte"; */ // Endereço (comentado)
+/* $telefone_oficina = "(31)97527-5084"; */ // Telefone da oficina
+$email_adm = 'hvfadvocacia@gmail.com'; // Email do administrador
+ $rodape_relatorios = "Desenvolvido por Martins Sistemas";  // Rodapé (comentado)
 
 //VARIAVEIS DO BANCO DE DADOS LOCAL
-$servidor = 'localhost';
-$usuario = 'root';
-$senha = '';
-$banco = 'oficina';
+$servidor = 'localhost'; // Servidor MySQL
+$usuario = 'root'; // Usuário do banco
+$senha = ''; // Senha do banco (vazia)
+$banco = 'oficina'; // Nome do banco de dados
 
 
 //ALGUMAS VARIAVEIS GLOBAIS
 
 //A PARTIR DE X PRODUTOS O NIVEL DO ESTOQUE ESTARÁ BAIXO
-$nivel_estoque = 5;
-$desconto_orc = 'Sim';
+$nivel_estoque = 5; // Quantidade mínima para alerta de estoque
+$desconto_orc = 'Sim'; // Permite desconto em orçamentos
 $valor_desconto = 5; //VALOR EM PORCENTAGEM, POR EXEMPLO 5 VAI SER 5 % SOBRE O VALOR FINAL
 $validade_orcamento_dias = 5; //5 DIAS PARA VALIDADE DO ORÇAMENTO
 $excluir_orcamento_dias = 15; //APÓS 15 DIAS O ORÇAMENTO QUE NÃO FOR APROVADO PELO CLIENTE SERÁ EXCLUÍDO
